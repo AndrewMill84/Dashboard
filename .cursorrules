@@ -1,0 +1,8 @@
+This project uses the AI Build OS workflow system.
+
+Core Rules for AI Agents:
+- Always read `STATUS.md` in the current project before doing any work to understand context.
+- Follow the rules listed in `AGENTS.md`.
+- Use the markdown templates from `templates/` for all artifacts. 
+- Update `STATUS.md` immediately after completing any stage or significant action.
+- Check `memory/decisions.md` and `memory/patterns.md` before making any major design decisions.

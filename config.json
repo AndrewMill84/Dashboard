@@ -1,0 +1,9 @@
+{
+  "scanDirectories": [
+    "C:/Github",
+    "C:/Users/andre/Loan Scenario Workbench",
+    "C:/Github/poker_bot",
+    "C:/Users/andre/cbev4"
+  ],
+  "port": 3000
+}
