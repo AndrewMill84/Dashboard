@@ -13,7 +13,7 @@ A local, read-only web dashboard for monitoring projects built with the [AI Buil
 - **File viewer** — click any artifact to view it rendered as formatted markdown (GFM support)
 - **Settings panel** — add/remove scan directories from the UI without editing config files
 - **Smart scanner** — works whether you point it at a parent folder or a specific project folder
-- **Dark theme** — easy on the eyes, CSS custom properties for easy customisation
+- **Light/dark theme** — toggle in the header, persisted in localStorage, respects system preference on first visit
 - **Path security** — directory traversal protection on all file-reading endpoints
 
 ---
@@ -189,7 +189,6 @@ You can manage scan directories from the settings panel in the app (gear icon in
 
 - Auto-refresh project list on a timer
 - Unit tests for parser, scanner, and path security
-- Light/dark theme toggle with persistence
 - Search and filter projects by name
 - Nested directory file browser
 - Cross-platform verification

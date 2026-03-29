@@ -14,14 +14,14 @@
 
 ## Summary
 
-DevDashboard is a local, read-only web application that provides a visual dashboard for projects built using the AI Build Operating System. It scans configured directories on disk, parses each project's `STATUS.md` and standard artifacts, and presents the information through a clean React-based dark-themed interface. Users can see all projects at a glance, drill into any project's full state, view artifact files rendered as markdown, and manage scan directories through an in-app settings panel.
+DevDashboard is a local, read-only web application that provides a visual dashboard for projects built using the AI Build Operating System. It scans configured directories on disk, parses each project's `STATUS.md` and standard artifacts, and presents the information through a clean React-based interface with light and dark themes. Users can see all projects at a glance, drill into any project's full state, view artifact files rendered as markdown, and manage scan directories through an in-app settings panel.
 
 ---
 
 ## What Was Delivered
 
 - **Node.js + Express backend** with REST API for project discovery, STATUS.md parsing, artifact detection, and secure file reading
-- **React (Vite) frontend** with dark theme, project list view, project detail view, file viewer overlay, and settings modal
+- **React (Vite) frontend** with light/dark theme toggle, project list view, project detail view, file viewer overlay, and settings modal
 - **Smart scanner** that detects projects whether a parent folder or project folder is configured as a scan directory
 - **STATUS.md parser** that extracts all 14 control panel fields, completed artifacts checklist, and stage history table
 - **Path security** preventing directory traversal attacks on the file-reading endpoint
@@ -54,7 +54,7 @@ DevDashboard is a local, read-only web application that provides a visual dashbo
 | 17 | Graceful handling of missing/malformed STATUS.md | ✅ |
 | 18 | Configuration via config.json | ✅ |
 | 19 | GET /api/projects, /api/projects/:id, /api/projects/:id/files, /api/projects/:id/files/:filename, /api/config | ✅ |
-| 20 | Dark theme | ✅ |
+| 20 | Dark theme (with light/dark toggle) | ✅ |
 | 21 | Performance — loads within 2 seconds for up to 50 projects | ✅ |
 | 22 | Local-only, no database, no authentication | ✅ |
 
@@ -67,6 +67,7 @@ DevDashboard is a local, read-only web application that provides a visual dashbo
 | 25 | Uninitialized project tiles (no STATUS.md) | ✅ |
 | 26 | Two-row layout (tracked / uninitialized) | ✅ |
 | 27 | Alternate file paths (memory/decisions.md fallback) | ✅ |
+| 28 | Light/dark theme toggle with localStorage persistence | ✅ |
 
 ---
 
@@ -91,7 +92,7 @@ Full details in `memory/decisions.md`.
 - **Incremental task execution**: Building backend services first (scanner, parser, detector, security) then wiring API routes, then building frontend — each layer was testable in isolation before the next layer depended on it
 - **Single-file-per-concern architecture**: Each backend service (`scanner.js`, `statusParser.js`, `artifactDetector.js`, `pathSecurity.js`) has one job, making them easy to test and debug
 - **Vite dev experience**: Hot module replacement and the API proxy made frontend iteration fast
-- **CSS custom properties for theming**: Simple to implement, no runtime cost, easy to extend with a light theme later
+- **CSS custom properties for theming**: Simple to implement, no runtime cost, and cleanly extended to support both light and dark themes with a toggle persisted via localStorage
 - **Post-MVP enhancements during review**: The settings UI and smart scanner were identified during review and shipped without disrupting the core architecture
 
 ---
@@ -100,7 +101,7 @@ Full details in `memory/decisions.md`.
 
 - **decisions.md alternate path not anticipated**: The artifact detector knew about `memory/decisions.md` as an alternate path, but the file route didn't initially check it — caught during session 3 review. This suggests that alternate file paths should be handled as a cross-cutting concern rather than per-module
 - **No automated tests**: All validation was manual (API calls via PowerShell, browser inspection). For a tool that parses structured files, unit tests for the parser and scanner would catch regressions faster
-- **07-review.md artifact not persisted to disk**: The review was conducted in-session but the `07-review.md` file wasn't written to the project folder, creating a gap in the artifact chain
+- **07-review.md artifact not initially persisted to disk**: The review was conducted in-session but the `07-review.md` file wasn't written to the project folder until session 4, when this gap was identified during a follow-up review
 
 ---
 
@@ -125,7 +126,6 @@ Full details in `patterns.md` (located at `memory/patterns.md`).
 - **Single-level scan**: Only scans immediate children of configured directories
 - **No file browser for nested directories**: Only root-level project files are listed
 - **No search/filter**: Projects can only be sorted, not filtered by name
-- **No persistent theme preference**: Dark theme is hardcoded (no toggle)
 - **Windows-primary**: Tested on Windows 10; should work on macOS/Linux but not verified
 
 ---
@@ -136,11 +136,10 @@ Full details in `patterns.md` (located at `memory/patterns.md`).
 |---|---|---|---|
 | 1 | Auto-refresh project list on timer or file watcher | Medium | Eliminates manual reload after external changes |
 | 2 | Unit tests for parser, scanner, and path security | Medium | Prevents regressions, enables CI |
-| 3 | Light/dark theme toggle with persistence | Low | CSS variables already support it; needs toggle UI + localStorage |
-| 4 | Search/filter projects by name | Low | Useful once project count grows |
-| 5 | File browser for nested directories | Low | Currently only shows root-level files |
-| 6 | Bulk-initialize projects (create STATUS.md from template) | Low | Would move the app from read-only toward workflow management |
-| 7 | Cross-platform verification (macOS/Linux) | Low | Path handling uses `path.resolve` but not explicitly tested |
+| 3 | Search/filter projects by name | Low | Useful once project count grows |
+| 4 | File browser for nested directories | Low | Currently only shows root-level files |
+| 5 | Bulk-initialize projects (create STATUS.md from template) | Low | Would move the app from read-only toward workflow management |
+| 6 | Cross-platform verification (macOS/Linux) | Low | Path handling uses `path.resolve` but not explicitly tested |
 
 ---
 

@@ -13,7 +13,7 @@
 
 ## Current State Summary
 
-DevDashboard MVP is complete, reviewed, and approved. The application is a local Node.js + React web dashboard that scans configured directories for AI Build OS projects, parses their STATUS.md files, and presents project state through a dark-themed browser UI. All 12 implementation tasks plus 5 post-MVP enhancements have been delivered. The app runs locally via `npm start` at `http://localhost:3000`.
+DevDashboard MVP is complete, reviewed, and approved. The application is a local Node.js + React web dashboard that scans configured directories for AI Build OS projects, parses their STATUS.md files, and presents project state through a browser UI with light and dark themes. All 12 implementation tasks plus 6 post-MVP enhancements have been delivered. The app runs locally via `npm start` at `http://localhost:3000`.
 
 ---
 
@@ -28,6 +28,7 @@ DevDashboard MVP is complete, reviewed, and approved. The application is a local
 - Markdown file viewer with react-markdown and remark-gfm
 - Settings UI for managing scan directories
 - Two-row layout separating tracked and uninitialized projects
+- Light/dark theme toggle persisted in localStorage (respects system preference on first visit)
 - Production build pipeline (`npm run build` + `npm start`)
 
 ---
@@ -38,11 +39,10 @@ DevDashboard MVP is complete, reviewed, and approved. The application is a local
 |---|---|---|---|
 | 1 | Auto-refresh project list | Medium | Timer or file-watcher to pick up external changes |
 | 2 | Unit tests | Medium | Parser, scanner, path security — enables CI |
-| 3 | Light/dark theme toggle | Low | CSS variables already support it |
-| 4 | Search/filter projects | Low | Useful as project count grows |
-| 5 | Nested directory file browser | Low | Currently root-level files only |
-| 6 | Bulk project initialization | Low | Create STATUS.md from template |
-| 7 | Cross-platform verification | Low | macOS/Linux not yet tested |
+| 3 | Search/filter projects | Low | Useful as project count grows |
+| 4 | Nested directory file browser | Low | Currently root-level files only |
+| 5 | Bulk project initialization | Low | Create STATUS.md from template |
+| 6 | Cross-platform verification | Low | macOS/Linux not yet tested |
 
 ---
 
@@ -50,8 +50,7 @@ DevDashboard MVP is complete, reviewed, and approved. The application is a local
 
 | # | Issue | Severity | Notes |
 |---|---|---|---|
-| 1 | 07-review.md not persisted to disk | Low | Review was conducted in-session; artifact file wasn't written to project folder |
-| 2 | No automated tests | Medium | All validation was manual; regressions possible |
+| 1 | No automated tests | Medium | All validation was manual; regressions possible |
 
 ---
 
@@ -103,7 +102,6 @@ npm start
 1. Add unit tests for the STATUS.md parser and scanner service
 2. Implement auto-refresh so the project list stays current without manual reload
 3. Add search/filter to the project list for faster navigation
-4. Consider a light theme toggle for daytime use
 
 ---
 
@@ -117,6 +115,7 @@ npm start
 | Plan | `04-plan.md` |
 | Tasks | `05-tasks.md` |
 | Implementation Log | `06-implementation-log.md` |
+| Review | `07-review.md` |
 | Report | `08-report.md` |
 | Handoff | `09-handoff.md` |
 | Decisions | `decisions.md` (`memory/decisions.md`) |

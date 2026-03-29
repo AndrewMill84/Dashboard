@@ -87,7 +87,7 @@ Key decisions already confirmed by the human during idea review:
 | 11 | File viewer | done |
 | 12 | Integration and polish | done |
 
-### Post-MVP enhancements (Sessions 2–3)
+### Post-MVP enhancements (Sessions 2–4)
 
 | Feature | Status |
 |---|---|
@@ -96,3 +96,4 @@ Key decisions already confirmed by the human during idea review:
 | Projects without STATUS.md — shown as tiles with "not initialized" indicator | done |
 | Two-row layout — tracked projects on top, uninitialized projects below with divider | done |
 | Alternate file paths — file viewer resolves `memory/decisions.md` when `decisions.md` not at root | done |
+| Light/dark theme toggle — persisted in localStorage, respects system preference | done |
