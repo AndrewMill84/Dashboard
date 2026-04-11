@@ -66,11 +66,11 @@ Edit `config.json` in the project root so it points at the directories where you
     "D:/another/project/folder"
   ],
   "bootstrapSourcePath": "C:/path/to/ai-build-os",
-  "port": 3000
+  "port": 8742
 }
 ```
 
-Each directory is scanned one level deep. Any child folder containing a `STATUS.md` file is treated as a tracked project. Folders without `STATUS.md` appear as "not yet initialized".
+Each scan directory is walked recursively (with common folders like `node_modules` and `.git` skipped). Any folder containing a `STATUS.md` is treated as a tracked project. Scan roots with no `STATUS.md` anywhere underneath appear as "not yet initialized".
 
 ### 4. Build and run
 
@@ -79,7 +79,15 @@ npm run build
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:8742](http://localhost:8742) in your browser.
+
+### Desktop shortcut (Windows)
+
+1. Run **`npm install`** once in the repo (same as above).
+2. Double-click **`Launch-DevDashboard.cmd`** in the project root (or create a desktop shortcut to that file: right-click the `.cmd` → Send to → Desktop).
+3. The script builds the client if needed, starts the server on the port from `config.json` (default **8742**), and opens your browser after a short delay.
+
+Close the console window to stop the server. To use a different port, change `"port"` in `config.json` and restart.
 
 ---
 
@@ -91,12 +99,12 @@ For local development with hot reload:
 npm run dev
 ```
 
-This starts both the Express backend on `3000` and the Vite dev server on `5173`. The Vite dev server proxies API requests to the backend automatically.
+This starts both the Express backend on **8742** (see `config.json`) and the Vite dev server on `5173`. The Vite dev server proxies API requests to the backend automatically.
 
-If you already have an older DevDashboard server process running on `localhost:3000`, restart it after pulling code changes so new routes and config fields are picked up:
+If you already have an older DevDashboard server process running on `localhost:8742`, restart it after pulling code changes so new routes and config fields are picked up:
 
 ```powershell
-netstat -ano | findstr :3000
+netstat -ano | findstr :8742
 Stop-Process -Id <PID> -Force
 node server/index.js
 ```
@@ -104,7 +112,7 @@ node server/index.js
 You can verify the bootstrap-capable backend is live with:
 
 ```powershell
-Invoke-RestMethod http://localhost:3000/api/config | ConvertTo-Json
+Invoke-RestMethod http://localhost:8742/api/config | ConvertTo-Json
 ```
 
 The response should include `bootstrapSourcePath`.
@@ -139,6 +147,8 @@ DevDashboard/
 |   |   `-- utils/                   # Stage definitions
 |   `-- vite.config.js
 |-- config.json                      # Scan directories, bootstrap source, and port
+|-- Launch-DevDashboard.cmd          # Windows: start server + open browser
+|-- Launch-DevDashboard.ps1          # Launcher logic (port read from config.json)
 |-- templates/                       # AI Build OS artifact templates
 |-- workflow/                        # AI Build OS stage definitions
 |-- memory/                          # Decisions, patterns, project index
@@ -191,7 +201,7 @@ DevDashboard is the visual companion for this workflow. It reads these files, pr
 |---|---|---|---|---|
 | `scanDirectories` | `string[]` | Yes | - | Absolute paths to directories containing project folders |
 | `bootstrapSourcePath` | `string` | No | - | Absolute path to the local AI Build OS starter repository used for scaffolding new projects |
-| `port` | `number` | No | `3000` | Port for the local server |
+| `port` | `number` | No | `8742` | Port for the local server |
 
 You can manage scan directories from the settings panel in the app or by editing `config.json` directly. The create-project flow uses `bootstrapSourcePath` and adds a new parent location to `scanDirectories` automatically when needed so the created project appears immediately.
 
@@ -201,7 +211,7 @@ You can manage scan directories from the settings panel in the app or by editing
 2. Enter the parent location and new folder name.
 3. DevDashboard creates the folder, copies the curated AI Build OS starter scaffold, generates `STATUS.md` and `01-idea.md`, and opens the new project.
 
-If the modal shows `bootstrapSourcePath is not configured in config.json` but your local `config.json` already contains it, you are almost certainly talking to an older backend process on `localhost:3000`. Restart the server and try again.
+If the modal shows `bootstrapSourcePath is not configured in config.json` but your local `config.json` already contains it, you are almost certainly talking to an older backend process on `localhost:8742`. Restart the server and try again.
 
 Generated scaffold contents include:
 

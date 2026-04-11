@@ -105,7 +105,7 @@ The app reads a `config.json` file from the application root directory.
     "D:/Projects"
   ],
   "bootstrapSourcePath": "C:/Users/andre/AI Build Process/ai-build-os",
-  "port": 3000
+  "port": 8742
 }
 ```
 
@@ -113,7 +113,7 @@ The app reads a `config.json` file from the application root directory.
 |---|---|---|---|
 | `scanDirectories` | `string[]` | Yes | List of absolute paths to parent directories containing project folders |
 | `bootstrapSourcePath` | `string` | No | Absolute path to the local AI Build OS starter repository used to scaffold new projects |
-| `port` | `number` | No | Port for the local server (default: `3000`) |
+| `port` | `number` | No | Port for the local server (default: `8742`) |
 
 ---
 
@@ -121,12 +121,12 @@ The app reads a `config.json` file from the application root directory.
 
 ### What makes a valid project
 
-A folder inside a scan directory is treated as a valid project if and only if it contains a `STATUS.md` file.
+A folder under a scan directory is treated as a valid project if and only if it contains a `STATUS.md` file.
 
 ### Scanning behaviour
 
-- The app scans each configured directory one level deep (not recursive)
-- Each immediate child folder is checked for the presence of `STATUS.md`
+- The app walks each configured directory recursively up to a maximum depth, skipping common noise directories (for example `node_modules`, `.git`, `.cursor`)
+- Each folder that contains `STATUS.md` is listed as a project
 - Folders without `STATUS.md` are shown as uninitialized locations
 - If `STATUS.md` exists but cannot be parsed, the project is shown with a warning state
 

@@ -1,5 +1,36 @@
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+
+const MAX_SCAN_DEPTH = 12;
+
+/** Skip noisy or huge subtrees when searching for STATUS.md */
+const SKIP_DIR_NAMES = new Set([
+  "node_modules",
+  ".git",
+  ".cursor",
+  ".codex",
+  "dist",
+  "build",
+  ".next",
+  "venv",
+  ".venv",
+  "__pycache__",
+  ".pytest_cache",
+  "coverage",
+  ".turbo",
+  ".cache",
+  "AppData",
+  "Application Data",
+  "Cookies",
+  "Local Settings",
+  "PrintHood",
+  "NetHood",
+  "Recent",
+  "SendTo",
+  "Templates",
+  "Start Menu",
+]);
 
 function hasStatusFile(dirPath) {
   try {
@@ -10,30 +41,54 @@ function hasStatusFile(dirPath) {
   }
 }
 
+function shouldSkipDir(name) {
+  if (SKIP_DIR_NAMES.has(name)) return true;
+  return false;
+}
+
+/** Stable id for API routes (same folder always maps to same id). */
+function projectIdFromPath(folderPath) {
+  const resolved = path.resolve(folderPath);
+  const hash = crypto.createHash("sha1").update(resolved).digest("hex").slice(0, 16);
+  return `p-${hash}`;
+}
+
+/**
+ * Depth-first search: every directory that contains STATUS.md is a project.
+ * Subdirectories are still visited so nested repos can appear separately.
+ */
+function walkForStatusDirs(dir, onStatusDir, depth) {
+  if (depth > MAX_SCAN_DEPTH) return;
+
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  if (hasStatusFile(dir)) {
+    onStatusDir(dir);
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (shouldSkipDir(entry.name)) continue;
+    const sub = path.join(dir, entry.name);
+    walkForStatusDirs(sub, onStatusDir, depth + 1);
+  }
+}
+
 function scanForProjects(scanDirectories) {
   const projects = [];
   const seenPaths = new Set();
 
-  scanDirectories.forEach((scanDir, dirIndex) => {
+  scanDirectories.forEach((scanDir) => {
     const resolvedScanDir = path.resolve(scanDir);
-    const selfHasStatus = hasStatusFile(scanDir);
 
-    // If this directory itself has STATUS.md, add it as a project
-    if (selfHasStatus && !seenPaths.has(resolvedScanDir)) {
-      seenPaths.add(resolvedScanDir);
-      projects.push({
-        id: `${dirIndex}-${path.basename(scanDir).toLowerCase()}`,
-        name: path.basename(scanDir),
-        path: scanDir,
-        scanDirectory: scanDir,
-        hasStatus: true,
-      });
-    }
-
-    // Scan child directories for projects
-    let entries;
+    let stat;
     try {
-      entries = fs.readdirSync(scanDir, { withFileTypes: true });
+      stat = fs.statSync(scanDir);
     } catch (err) {
       if (err.code === "ENOENT") {
         console.warn(
@@ -41,15 +96,14 @@ function scanForProjects(scanDirectories) {
         );
       } else {
         console.warn(
-          `[Scanner] Cannot read scan directory "${scanDir}": ${err.message}`
+          `[Scanner] Cannot stat scan directory "${scanDir}": ${err.message}`
         );
       }
 
-      // Directory doesn't exist or can't be read — still show it as a tile
-      if (!seenPaths.has(resolvedScanDir) && !selfHasStatus) {
+      if (!seenPaths.has(resolvedScanDir)) {
         seenPaths.add(resolvedScanDir);
         projects.push({
-          id: `${dirIndex}-${path.basename(scanDir).toLowerCase()}`,
+          id: projectIdFromPath(scanDir),
           name: path.basename(scanDir),
           path: scanDir,
           scanDirectory: scanDir,
@@ -59,32 +113,45 @@ function scanForProjects(scanDirectories) {
       return;
     }
 
-    let foundChildren = false;
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-
-      const folderPath = path.join(scanDir, entry.name);
-      const resolvedPath = path.resolve(folderPath);
-
-      if (seenPaths.has(resolvedPath)) continue;
-      if (!hasStatusFile(folderPath)) continue;
-
-      foundChildren = true;
-      seenPaths.add(resolvedPath);
-      projects.push({
-        id: `${dirIndex}-${entry.name.toLowerCase()}`,
-        name: entry.name,
-        path: folderPath,
-        scanDirectory: scanDir,
-        hasStatus: true,
-      });
+    if (!stat.isDirectory()) {
+      console.warn(`[Scanner] Scan path is not a directory: ${scanDir}`);
+      if (!seenPaths.has(resolvedScanDir)) {
+        seenPaths.add(resolvedScanDir);
+        projects.push({
+          id: projectIdFromPath(scanDir),
+          name: path.basename(scanDir),
+          path: scanDir,
+          scanDirectory: scanDir,
+          hasStatus: false,
+        });
+      }
+      return;
     }
 
-    // No STATUS.md here and no children with STATUS.md — show as unconfigured project
-    if (!selfHasStatus && !foundChildren && !seenPaths.has(resolvedScanDir)) {
+    let foundStatusUnderRoot = false;
+
+    walkForStatusDirs(
+      scanDir,
+      (statusDir) => {
+        const resolved = path.resolve(statusDir);
+        if (seenPaths.has(resolved)) return;
+        seenPaths.add(resolved);
+        foundStatusUnderRoot = true;
+        projects.push({
+          id: projectIdFromPath(statusDir),
+          name: path.basename(statusDir),
+          path: statusDir,
+          scanDirectory: scanDir,
+          hasStatus: true,
+        });
+      },
+      0
+    );
+
+    if (!foundStatusUnderRoot && !seenPaths.has(resolvedScanDir)) {
       seenPaths.add(resolvedScanDir);
       projects.push({
-        id: `${dirIndex}-${path.basename(scanDir).toLowerCase()}`,
+        id: projectIdFromPath(scanDir),
         name: path.basename(scanDir),
         path: scanDir,
         scanDirectory: scanDir,
@@ -101,4 +168,8 @@ function findProjectById(scanDirectories, projectId) {
   return all.find((p) => p.id === projectId) || null;
 }
 
-module.exports = { scanForProjects, findProjectById };
+module.exports = {
+  scanForProjects,
+  findProjectById,
+  projectIdFromPath,
+};

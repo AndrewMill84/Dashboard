@@ -1,7 +1,11 @@
 const express = require("express");
 const path = require("path");
 const { saveConfig } = require("../config");
-const { scanForProjects, findProjectById } = require("../services/scanner");
+const {
+  scanForProjects,
+  findProjectById,
+  projectIdFromPath,
+} = require("../services/scanner");
 const { parseStatusFile } = require("../services/statusParser");
 const { detectArtifacts } = require("../services/artifactDetector");
 const { bootstrapProject } = require("../services/projectBootstrap");
@@ -42,10 +46,7 @@ function createProjectRoutes(config) {
         folderName,
       });
 
-      const scanDirIndex = config.scanDirectories.findIndex(
-        (directory) => path.resolve(directory) === resolvedParent
-      );
-      const projectId = `${scanDirIndex}-${result.projectName.toLowerCase()}`;
+      const projectId = projectIdFromPath(result.projectPath);
 
       res.status(201).json({
         project: {
