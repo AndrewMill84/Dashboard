@@ -46,3 +46,11 @@ export function removeScanDirectory(directory) {
     body: JSON.stringify({ directory }),
   });
 }
+
+export function createProject(parentDirectory, folderName) {
+  return request("/projects/bootstrap", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ parentDirectory, folderName }),
+  });
+}

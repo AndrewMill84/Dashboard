@@ -69,3 +69,27 @@
 | **Decision** | Generate project IDs by combining the scan directory index and folder name (e.g. `0-devdashboard`) |
 | **Rationale** | Deterministic, URL-safe, and requires no database or state file. The scan directory index prevents collisions when two directories contain folders with the same name. IDs remain stable across app restarts as long as the config order doesn't change. |
 | **Alternatives considered** | UUID generation (rejected: requires persistence), hash-based IDs (rejected: harder to debug, no clear advantage) |
+
+---
+
+## Decision 7: Use a configured local AI Build OS source for scaffolding
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-03-29 |
+| **Stage** | 4 - Technical Plan |
+| **Decision** | Create-project bootstrap uses a local `bootstrapSourcePath` in `config.json` rather than downloading starter files from GitHub at runtime |
+| **Rationale** | The dashboard is a local tool, network access is unnecessary for the common path, and the local source is the authoritative working copy. Using a local path avoids network failures and keeps scaffold creation fast and deterministic. |
+| **Alternatives considered** | GitHub download at runtime (rejected: adds network dependency and version drift), bundling starter files inside DevDashboard (rejected: duplicates the AI Build OS source of truth) |
+
+---
+
+## Decision 8: Auto-add bootstrap locations to scanDirectories
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-03-29 |
+| **Stage** | 4 - Technical Plan |
+| **Decision** | When a project is created in a parent location that is not already scanned, append that parent directory to `scanDirectories` automatically |
+| **Rationale** | The user expects the newly created project to show up in DevDashboard immediately. Automatically adding the parent location avoids a second setup step and keeps the bootstrap flow end-to-end. |
+| **Alternatives considered** | Restrict creation to existing scan directories only (rejected: less flexible than the requested flow), create the project without updating config (rejected: the new project might not appear, which is confusing) |

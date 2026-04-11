@@ -1,12 +1,82 @@
 const express = require("express");
 const path = require("path");
+const { saveConfig } = require("../config");
 const { scanForProjects, findProjectById } = require("../services/scanner");
 const { parseStatusFile } = require("../services/statusParser");
 const { detectArtifacts } = require("../services/artifactDetector");
+const { bootstrapProject } = require("../services/projectBootstrap");
 
 const router = express.Router();
 
 function createProjectRoutes(config) {
+  router.post("/projects/bootstrap", (req, res) => {
+    const { parentDirectory, folderName } = req.body || {};
+
+    if (!parentDirectory || typeof parentDirectory !== "string") {
+      return res
+        .status(400)
+        .json({ error: "parentDirectory (string) is required" });
+    }
+
+    if (!folderName || typeof folderName !== "string") {
+      return res.status(400).json({ error: "folderName (string) is required" });
+    }
+
+    const resolvedParent = path.resolve(parentDirectory);
+    const originalScanDirectories = [...config.scanDirectories];
+    const alreadyScanning = originalScanDirectories.some(
+      (directory) => path.resolve(directory) === resolvedParent
+    );
+
+    try {
+      if (!alreadyScanning) {
+        const rawDirs = [...originalScanDirectories, resolvedParent].map((dir) =>
+          dir.replace(/\\/g, "/")
+        );
+        saveConfig(config, { scanDirectories: rawDirs });
+      }
+
+      const result = bootstrapProject({
+        sourceRoot: config.bootstrapSourcePath,
+        parentDirectory: resolvedParent,
+        folderName,
+      });
+
+      const scanDirIndex = config.scanDirectories.findIndex(
+        (directory) => path.resolve(directory) === resolvedParent
+      );
+      const projectId = `${scanDirIndex}-${result.projectName.toLowerCase()}`;
+
+      res.status(201).json({
+        project: {
+          id: projectId,
+          name: result.projectName,
+          path: result.projectPath,
+        },
+        locationAdded: !alreadyScanning,
+      });
+    } catch (err) {
+      if (!alreadyScanning) {
+        try {
+          saveConfig(config, {
+            scanDirectories: originalScanDirectories.map((dir) =>
+              dir.replace(/\\/g, "/")
+            ),
+          });
+        } catch (rollbackErr) {
+          console.error(
+            "[API] Failed to roll back scanDirectories after bootstrap error:",
+            rollbackErr.message
+          );
+        }
+      }
+
+      const statusCode = err.statusCode || 500;
+      console.error("[API] Error bootstrapping project:", err.message);
+      res.status(statusCode).json({ error: err.message });
+    }
+  });
+
   router.get("/projects", (_req, res) => {
     try {
       const projects = scanForProjects(config.scanDirectories);

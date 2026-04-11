@@ -1,4 +1,4 @@
-# Technical Implementation Plan — DevDashboard
+# Technical Implementation Plan - DevDashboard
 
 ## Metadata
 
@@ -6,7 +6,7 @@
 |---|---|
 | **Project** | DevDashboard |
 | **Date** | 2026-03-29 |
-| **Stage** | 4 — Technical Plan |
+| **Stage** | 4 - Technical Plan |
 | **Status** | Approved |
 | **Source** | `03-spec.md` |
 
@@ -14,419 +14,269 @@
 
 ## 1. Overview
 
-This plan describes how to build DevDashboard as a local Node.js web application with a React frontend and Express backend. The app reads project folders from the file system, parses `STATUS.md` files, and serves the data through a REST API to a single-page React UI.
+DevDashboard remains a local Node.js + React dashboard for reading AI Build OS projects from disk, but it now also supports creating a brand-new project scaffold from a local AI Build OS starter repository. The implementation should preserve the existing read-oriented architecture while adding one safe write path for project creation.
 
 ---
 
-## 2. Project Structure
+## 2. Architecture
 
+```text
+Browser UI
+  -> React app with dashboard, project detail, settings, and create-project modal
+  -> Calls local REST API
+
+Express API
+  -> Config loader / persistence
+  -> Scanner service
+  -> STATUS.md parser
+  -> Artifact detector
+  -> File reader with path security
+  -> Project bootstrap service
+
+Local file system
+  -> Tracked project folders
+  -> AI Build OS starter repository (local source for scaffolding)
 ```
+
+The bootstrap feature should not introduce a database, background worker, or remote dependency. All writes remain local and synchronous, which keeps the flow simple and debuggable.
+
+---
+
+## 3. Project Structure
+
+```text
 DevDashboard/
-├── config.json                  # Scan directories + port config
-├── package.json                 # Root package.json (workspace or scripts)
-├── server/
-│   ├── index.js                 # Express entry point
-│   ├── config.js                # Loads and validates config.json
-│   ├── routes/
-│   │   ├── projects.js          # /api/projects and /api/projects/:id
-│   │   └── files.js             # /api/projects/:id/files[/:filename]
-│   ├── services/
-│   │   ├── scanner.js           # Discovers valid project folders
-│   │   ├── statusParser.js      # Parses STATUS.md into structured data
-│   │   └── artifactDetector.js  # Checks which standard artifacts exist
-│   └── utils/
-│       └── pathSecurity.js      # Path traversal prevention
-├── client/
-│   ├── index.html               # Vite entry HTML
-│   ├── vite.config.js           # Vite configuration
-│   ├── package.json             # Frontend dependencies
-│   └── src/
-│       ├── main.jsx             # React entry point
-│       ├── App.jsx              # Root component with routing
-│       ├── api/
-│       │   └── client.js        # Fetch wrapper for backend API
-│       ├── components/
-│       │   ├── ProjectList.jsx          # Main dashboard grid/list
-│       │   ├── ProjectCard.jsx          # Summary card for one project
-│       │   ├── ProjectDetail.jsx        # Full project view
-│       │   ├── WorkflowMap.jsx          # Visual stage progression
-│       │   ├── ArtifactChecklist.jsx    # Artifact completion list
-│       │   ├── StageHistory.jsx         # Stage transition table
-│       │   ├── FileViewer.jsx           # Markdown file viewer panel
-│       │   ├── StatusBadge.jsx          # Stage status badge
-│       │   └── SortControls.jsx         # Sorting UI for project list
-│       ├── hooks/
-│       │   ├── useProjects.js           # Fetch and cache project list
-│       │   └── useProjectDetail.js      # Fetch single project detail
-│       ├── styles/
-│       │   ├── global.css               # Reset, variables, dark theme
-│       │   └── components.css           # Component-specific styles
-│       └── utils/
-│           └── stages.js                # Stage definitions and helpers
-└── docs/                        # Workflow artifacts (01-idea.md, etc.)
+|-- config.json
+|-- server/
+|   |-- index.js
+|   |-- config.js
+|   |-- routes/
+|   |   |-- config.js
+|   |   |-- files.js
+|   |   `-- projects.js
+|   |-- services/
+|   |   |-- artifactDetector.js
+|   |   |-- projectBootstrap.js
+|   |   |-- scanner.js
+|   |   `-- statusParser.js
+|   `-- utils/
+|       `-- pathSecurity.js
+|-- client/
+|   `-- src/
+|       |-- api/
+|       |   `-- client.js
+|       |-- components/
+|       |   |-- CreateProjectModal.jsx
+|       |   |-- FileViewer.jsx
+|       |   |-- ProjectCard.jsx
+|       |   |-- ProjectDetail.jsx
+|       |   |-- ProjectList.jsx
+|       |   |-- SettingsModal.jsx
+|       |   |-- SortControls.jsx
+|       |   |-- StageHistory.jsx
+|       |   |-- StatusBadge.jsx
+|       |   `-- WorkflowMap.jsx
+|       |-- hooks/
+|       |   |-- useProjectDetail.js
+|       |   `-- useProjects.js
+|       |-- styles/
+|       |   |-- components.css
+|       |   `-- global.css
+|       `-- utils/
+|           `-- stages.js
+`-- output/
 ```
 
 ---
 
-## 3. Backend Design
+## 4. Backend Design
 
-### 3.1 Entry Point — `server/index.js`
+### 4.1 `server/config.js`
 
-- Creates an Express app
-- Loads config from `config.json`
-- Mounts API routes under `/api`
-- In production mode, serves the built React frontend as static files
-- Starts listening on the configured port (default 3000)
+- Continue loading `scanDirectories` and `port` from `config.json`.
+- Add support for optional `bootstrapSourcePath`.
+- Resolve all configured paths to absolute paths.
+- Keep `saveConfig()` as the single persistence path for config changes.
 
-### 3.2 Configuration — `server/config.js`
+### 4.2 `server/services/scanner.js`
 
-- Reads `config.json` from the project root
-- Validates that `scanDirectories` is a non-empty array of strings
-- Resolves all paths to absolute paths
-- Provides a default port of 3000 if not specified
-- Throws a clear error if the config file is missing or invalid
+- Keep the current smart scanning behavior.
+- No scanner changes should be required beyond returning projects normally after bootstrap.
+- Newly created projects must be discoverable immediately after the bootstrap route returns.
 
-### 3.3 Scanner Service — `server/services/scanner.js`
+### 4.3 `server/services/projectBootstrap.js`
 
-**Purpose:** Discover valid project folders across all scan directories.
+Create a dedicated service responsible for the scaffold write path.
 
-**Logic:**
-1. Iterate each scan directory from config
-2. List immediate child directories (one level deep, not recursive)
-3. For each child, check if `STATUS.md` exists
-4. If yes, include it as a valid project
-5. Generate a stable project ID from the scan directory index + folder name (e.g. `0-devdashboard`)
+Responsibilities:
+- Validate the local starter repository path.
+- Validate the requested parent directory and folder name.
+- Create the new target folder.
+- Copy a curated starter set from the AI Build OS source:
+  - `AGENTS.md`
+  - `.cursorrules`
+  - `.agents/`
+  - `workflow/`
+  - `templates/`
+  - `QUICKREF.md`
+  - `project-starter/new-project-checklist.md` copied as `new-project-checklist.md`
+- Generate project-specific starter files:
+  - `STATUS.md` from `project-starter/STATUS.md`
+  - `01-idea.md` from `templates/idea-intake.md`
+  - `memory/decisions.md`
+  - `memory/patterns.md`
+  - `memory/project-index.md`
+- Stamp the new project name and current local date into generated files.
+- Remove the partially created target folder if any write fails after creation.
 
-**Returns:** Array of `{ id, name, path, scanDirectory }` objects.
+Implementation notes:
+- Use `fs.cpSync()` for directory copies and `fs.writeFileSync()` for generated files.
+- Treat missing required starter files as configuration errors.
+- Reject existing target directories with HTTP 409 semantics.
 
-### 3.4 STATUS.md Parser — `server/services/statusParser.js`
+### 4.4 `server/routes/projects.js`
 
-**Purpose:** Parse a STATUS.md file into a structured object.
+Add `POST /api/projects/bootstrap`.
 
-**Logic:**
-1. Read the file as UTF-8 text
-2. Find the Control Panel table (markdown table following the `## 🎛️ Control Panel` heading)
-3. Parse each row: extract the field name from the bold text in column 1, and the value from column 2
-4. Strip backticks and leading/trailing whitespace from values
-5. Parse the Completed Artifacts section: find lines matching `- [x]` and `- [ ]` patterns
-6. Parse the Stage History table if present
+Request body:
 
-**Returns:**
-```js
+```json
 {
-  project: "DevDashboard",
-  currentStage: "4 — Technical Plan",
-  stageStatus: "in-progress",
-  objective: "...",
-  currentActionRequired: "...",
-  whoActsNext: "agent",
-  artifactDueNext: "04-plan.md",
-  requiredInputFromHuman: "...",
-  relevantFiles: "...",
-  openQuestions: "None",
-  blockers: "None",
-  lastCompletedStep: "...",
-  nextStepAfterCurrent: "...",
-  started: "2026-03-29",
-  lastUpdated: "2026-03-29",
-  completedArtifacts: [
-    { name: "01-idea.md", label: "Idea capture", completed: true },
-    { name: "02-clarification.md", label: "Clarification Q&A", completed: true },
-    ...
-  ],
-  stageHistory: [
-    { date: "2026-03-29", stage: "1 — Idea Capture", who: "human", notes: "..." },
-    ...
-  ],
-  parseError: null
+  "parentDirectory": "C:/Github",
+  "folderName": "My New Project"
 }
 ```
 
-If parsing fails, return a partial object with `parseError` set to a descriptive message.
-
-### 3.5 Artifact Detector — `server/services/artifactDetector.js`
-
-**Purpose:** Check which standard artifact files actually exist on disk.
-
-**Logic:**
-1. Given a project path, check for each of the 10 standard files
-2. Return a map of filename → boolean (exists or not)
-
-This is used alongside the STATUS.md checkbox data to give a complete picture.
-
-### 3.6 Path Security — `server/utils/pathSecurity.js`
-
-**Purpose:** Prevent path traversal attacks in the file-reading endpoint.
-
-**Logic:**
-1. Resolve the requested file path to an absolute path
-2. Check that it falls within one of the configured scan directories
-3. Reject any request that tries to escape (e.g. `../../etc/passwd`)
-
-### 3.7 API Routes
-
-#### `GET /api/projects`
-
-1. Run the scanner to discover all valid projects
-2. For each project, parse `STATUS.md` and detect artifacts
-3. Return an array of summary objects
+Route behavior:
+- Validate request body shape.
+- Resolve `parentDirectory`.
+- If the parent directory is not already a configured scan directory, append it to `config.json` before bootstrap so the new project appears immediately.
+- Roll the config change back if bootstrap fails.
+- Call the bootstrap service.
+- Return `201` with the new project ID, path, and whether the location was newly added to the scan list.
 
 Response shape:
+
 ```json
-[
-  {
-    "id": "0-devdashboard",
-    "name": "DevDashboard",
-    "folderName": "DevDashboard",
-    "currentStage": "4 — Technical Plan",
-    "stageStatus": "in-progress",
-    "currentActionRequired": "...",
-    "whoActsNext": "agent",
-    "blockers": "None",
-    "lastUpdated": "2026-03-29",
-    "stageNumber": 4,
-    "completedStages": 3,
-    "totalStages": 9,
-    "parseError": null
-  }
-]
+{
+  "project": {
+    "id": "4-my new project",
+    "name": "My New Project",
+    "path": "C:/Github/My New Project"
+  },
+  "locationAdded": false
+}
 ```
 
-#### `GET /api/projects/:id`
+### 4.5 `server/routes/config.js`
 
-1. Look up the project by ID
-2. Return full parsed STATUS.md data + artifact existence map
+- Extend `GET /api/config` to include `bootstrapSourcePath`.
+- Keep add/remove scan-directory behavior unchanged.
 
-#### `GET /api/projects/:id/files`
+### 4.6 Safety Rules
 
-1. List all files in the project directory (non-recursive, files only)
-2. Return an array of filenames
-
-#### `GET /api/projects/:id/files/:filename`
-
-1. Validate the filename against path security
-2. Read the file as UTF-8
-3. Return `{ filename, content }` as JSON
-
-#### `GET /api/config`
-
-1. Return the current configuration (scan directories, port)
+- Bootstrap only writes inside the resolved target folder.
+- Folder names must reject traversal sequences and invalid Windows filename characters.
+- The feature uses only the configured local starter repository; no GitHub download fallback is part of this implementation.
 
 ---
 
-## 4. Frontend Design
+## 5. Frontend Design
 
-### 4.1 Routing
+### 5.1 Header flow
 
-Using React Router with two main routes:
+- Add a `New Project` button in the header alongside theme toggle and settings.
+- Keep the current dashboard layout and reuse the existing modal visual language.
 
-| Route | Component | Description |
-|---|---|---|
-| `/` | `ProjectList` | Dashboard with all projects |
-| `/project/:id` | `ProjectDetail` | Single project view |
+### 5.2 `CreateProjectModal.jsx`
 
-The file viewer is not a separate route — it opens as an overlay/panel within `ProjectDetail`.
+Responsibilities:
+- Load `/api/config` on open.
+- Suggest current scan directories in a datalist, while still allowing any absolute path to be entered.
+- Collect:
+  - parent location
+  - folder name
+- Call `createProject(parentDirectory, folderName)`.
+- Show inline validation and request errors.
+- On success:
+  - notify the app so the project list refreshes
+  - navigate directly to the new project detail page
 
-### 4.2 Component Breakdown
+### 5.3 API client
 
-**`ProjectList`**
-- Fetches `/api/projects` on mount
-- Renders a grid of `ProjectCard` components
-- Includes `SortControls` for sorting by name, updated, or stage
-- Handles loading and empty states
+Add a `createProject(parentDirectory, folderName)` helper to `client/src/api/client.js`.
 
-**`ProjectCard`**
-- Displays the summary for one project
-- Shows: name, stage, status badge, next action, who acts next, blockers, workflow progress bar
-- Clickable — navigates to `/project/:id`
+### 5.4 Styling
 
-**`ProjectDetail`**
-- Fetches `/api/projects/:id` on mount
-- Displays all STATUS.md fields in a structured layout
-- Contains `WorkflowMap`, `ArtifactChecklist`, and `StageHistory`
-- Manages the `FileViewer` overlay state
+- Reuse the overlay/modal shell from `SettingsModal`.
+- Keep the form compact and clearly instructional.
+- Explain that non-scanned locations will be added automatically so the project appears in the dashboard.
 
-**`WorkflowMap`**
-- Horizontal bar or step indicator showing stages 1–9
-- Each stage shows: label, completed/active/upcoming/blocked state
-- Active stage is highlighted, completed stages are filled, blocked gets a warning style
+---
 
-**`ArtifactChecklist`**
-- Lists all 10 standard artifacts
-- Shows checkbox state (from STATUS.md) and file existence (from artifact detection)
-- Files that exist are clickable (opens `FileViewer`)
-- Files that don't exist are greyed out
+## 6. Config Shape
 
-**`StageHistory`**
-- Simple table rendering the stage history from STATUS.md
-
-**`FileViewer`**
-- Overlay/modal panel that opens within the project detail view
-- Fetches `/api/projects/:id/files/:filename`
-- Renders markdown content as HTML using `react-markdown`
-- Shows filename as header, close button to dismiss
-
-**`StatusBadge`**
-- Small coloured badge component
-- Variants: `not-started` (grey), `in-progress` (blue), `blocked` (red/orange), `complete` (green)
-
-**`SortControls`**
-- Simple button group or dropdown
-- Options: name (A–Z), last updated (newest first), stage (lowest first)
-
-### 4.3 API Client — `client/src/api/client.js`
-
-A thin wrapper around `fetch()`:
-- Base URL: relative `/api` (same origin in dev via Vite proxy, same origin in production)
-- JSON parsing
-- Error handling (returns error objects rather than throwing)
-
-### 4.4 Custom Hooks
-
-**`useProjects()`**
-- Calls `GET /api/projects`
-- Returns `{ projects, loading, error, refresh }`
-
-**`useProjectDetail(id)`**
-- Calls `GET /api/projects/:id`
-- Returns `{ project, loading, error }`
-
-### 4.5 Styling Approach
-
-- Plain CSS with CSS custom properties (variables) for theming
-- Dark theme by default using `:root` variables
-- Two CSS files: `global.css` (reset, variables, base styles) and `components.css` (component styles)
-- No CSS framework — keeps the build simple and the app lightweight
-- Responsive layout using CSS Grid for the project list
-
-### 4.6 Stage Definitions — `client/src/utils/stages.js`
-
-A shared reference for stage data:
-
-```js
-export const STAGES = [
-  { number: 1, name: "Idea Capture", artifact: "01-idea.md" },
-  { number: 2, name: "Clarification", artifact: "02-clarification.md" },
-  { number: 3, name: "Specification", artifact: "03-spec.md" },
-  { number: 4, name: "Technical Plan", artifact: "04-plan.md" },
-  { number: 5, name: "Task Breakdown", artifact: "05-tasks.md" },
-  { number: 6, name: "Implementation", artifact: "06-implementation-log.md" },
-  { number: 7, name: "Review", artifact: "07-review.md" },
-  { number: 8, name: "Documentation", artifact: "08-report.md" },
-  { number: 9, name: "Handoff", artifact: "09-handoff.md" },
-];
+```json
+{
+  "scanDirectories": [
+    "C:/Github",
+    "C:/Users/andre/Loan Scenario Workbench"
+  ],
+  "bootstrapSourcePath": "C:/Users/andre/AI Build Process/ai-build-os",
+  "port": 3000
+}
 ```
 
----
-
-## 5. Development Workflow
-
-### 5.1 Dev Mode
-
-Run two processes during development:
-
-1. **Backend**: `node server/index.js` — runs the Express API on port 3000
-2. **Frontend**: `npm run dev` in `client/` — runs Vite dev server on port 5173 with a proxy to the backend
-
-Vite config will proxy `/api` requests to `http://localhost:3000`.
-
-### 5.2 Production Build
-
-1. Run `npm run build` in `client/` — outputs static files to `client/dist/`
-2. Express serves `client/dist/` as static files
-3. Single command to start: `node server/index.js`
-
-### 5.3 Start Script
-
-A root `package.json` script:
-- `npm run dev` — starts both backend and Vite dev server (using `concurrently` or similar)
-- `npm run build` — builds the frontend
-- `npm start` — starts the production server
+`bootstrapSourcePath` is optional in schema terms but required for the create-project feature to work.
 
 ---
 
-## 6. Dependencies
+## 7. Dependencies
 
-### Backend (`package.json` at root or `server/`)
-
-| Package | Purpose |
-|---|---|
-| `express` | HTTP server and routing |
-| `cors` | Cross-origin support (dev mode) |
-
-### Frontend (`client/package.json`)
-
-| Package | Purpose |
-|---|---|
-| `react` | UI library |
-| `react-dom` | React DOM rendering |
-| `react-router-dom` | Client-side routing |
-| `react-markdown` | Markdown → HTML rendering |
-| `remark-gfm` | GitHub-flavoured markdown support (tables, checkboxes) |
-
-### Dev Dependencies
-
-| Package | Purpose |
-|---|---|
-| `vite` | Frontend build tool |
-| `@vitejs/plugin-react` | Vite React support |
-| `concurrently` | Run backend + frontend in dev mode |
-
-Total: ~8 packages. Deliberately minimal.
+No new npm dependencies are required. The feature can be implemented with the existing stack and Node's built-in `fs` / `path` modules.
 
 ---
 
-## 7. Key Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| Express over Next.js | Simpler for a local tool; no SSR needed; clearer separation of backend and frontend |
-| Vite over CRA | Faster dev server, smaller builds, modern defaults |
-| Plain CSS over Tailwind/CSS-in-JS | Fewer dependencies, simpler build, good enough for a focused app |
-| `react-markdown` over custom renderer | Battle-tested, supports GFM tables and checkboxes out of the box |
-| File-based config over settings UI | Keeps MVP simple; config rarely changes |
-| Stable project IDs from path | No database needed; IDs are deterministic and URL-safe |
-
----
-
-## 8. Risks and Mitigations
+## 8. Risks And Mitigations
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| STATUS.md format varies between projects | Parser returns partial/wrong data | Defensive parsing with fallbacks; show warning for unparseable fields |
-| Large number of projects slows load | Slow project list | Scan is I/O bound but fast for <100 folders; optimize later if needed |
-| Path traversal in file endpoint | Security vulnerability | Strict path validation in `pathSecurity.js`; only allow files within scan dirs |
-| Markdown rendering edge cases | Broken rendering for unusual content | Use well-maintained library (`react-markdown` + `remark-gfm`); accept imperfect edge cases in MVP |
-| Config file missing on first run | App crashes at startup | Provide a default `config.json` with helpful comments; clear error message if missing |
+| Starter repo path is missing or wrong | Create flow fails | Validate `bootstrapSourcePath` and required source files before creating anything |
+| Partial scaffold on failure | Broken starter project | Delete the new target folder on bootstrap failure |
+| Parent directory is not currently scanned | New project does not appear | Auto-add the chosen parent directory to `scanDirectories` |
+| Invalid folder names on Windows | Create request fails after user input | Validate names early and return a clear error |
+| Existing target folder | Accidental overwrite risk | Reject with conflict error; never merge into an existing folder |
 
 ---
 
-## 9. What This Plan Does NOT Cover
+## 9. Validation Plan
 
-- Editing or writing files (out of scope for MVP)
-- Authentication or user management
-- WebSocket or real-time updates (page refresh is fine for MVP)
-- Database or caching layer
-- Automated testing strategy (addressed in task breakdown)
-- Deployment beyond local machine
+- `npm run build`
+- Manual API verification for `POST /api/projects/bootstrap`
+- Manual UI verification for:
+  - modal open / close
+  - successful create flow
+  - inline error states
+  - navigation to the new project
+- Confirm generated scaffold contains:
+  - `STATUS.md`
+  - `01-idea.md`
+  - `templates/`
+  - `workflow/`
+  - agent files
+  - `memory/` files
 
 ---
 
 ## 10. Implementation Order
 
-The recommended build order (to be broken down into tasks in Stage 5):
-
-1. **Project scaffolding** — package.json, folder structure, config
-2. **Backend core** — Express server, config loading, scanner service
-3. **STATUS.md parser** — the most critical backend logic
-4. **Artifact detector** — simple file existence checks
-5. **API routes** — wire up all five endpoints
-6. **Frontend scaffolding** — Vite + React setup, routing, dark theme
-7. **Project list view** — fetch projects, render cards, sorting
-8. **Project detail view** — full STATUS.md display, workflow map, artifact list
-9. **File viewer** — markdown rendering overlay
-10. **Integration and polish** — production build, error states, edge cases
+1. Update config loading to include `bootstrapSourcePath`.
+2. Build the bootstrap service.
+3. Add the bootstrap API route and config auto-add / rollback behavior.
+4. Add the create-project modal and header button.
+5. Refresh and navigate after successful project creation.
+6. Validate with a real scaffold creation and production build.
 
 ---
 
-<!-- APPROVAL GATE: This plan must be approved by the human before moving to Stage 5 — Task Breakdown -->
+<!-- APPROVAL GATE: This plan must be approved by the human before moving to Stage 5 - Task Breakdown -->

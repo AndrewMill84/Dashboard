@@ -47,9 +47,21 @@ function loadConfig() {
     path.resolve(dir)
   );
 
+  let bootstrapSourcePath = null;
+  if (
+    parsed.bootstrapSourcePath !== undefined &&
+    parsed.bootstrapSourcePath !== null
+  ) {
+    if (typeof parsed.bootstrapSourcePath !== "string") {
+      throw new Error('"bootstrapSourcePath" must be a string when provided.');
+    }
+
+    bootstrapSourcePath = path.resolve(parsed.bootstrapSourcePath);
+  }
+
   const port = typeof parsed.port === "number" ? parsed.port : 3000;
 
-  return { scanDirectories, port };
+  return { scanDirectories, bootstrapSourcePath, port };
 }
 
 function saveConfig(currentConfig, updates) {

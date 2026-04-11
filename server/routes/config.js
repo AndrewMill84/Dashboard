@@ -9,6 +9,7 @@ function createConfigRoutes(config) {
   router.get("/config", (_req, res) => {
     res.json({
       scanDirectories: config.scanDirectories,
+      bootstrapSourcePath: config.bootstrapSourcePath,
       port: config.port,
     });
   });

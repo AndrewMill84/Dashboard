@@ -230,3 +230,42 @@ Alternate path resolution was implemented in one module (artifact detector) but 
 - "File not found" errors for files that clearly exist in the project
 
 ---
+
+## Pattern: Curated local starter scaffold for project bootstrap
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-03-29 |
+| **Discovered In** | DevDashboard |
+| **Category** | Architecture |
+
+### Context
+
+The dashboard needed to create a new AI Build OS project without duplicating the entire source repository or depending on a GitHub download at runtime.
+
+### The Pattern
+
+Keep the starter source in a local repository path, copy only the curated files and directories the new project actually needs, and generate the project-specific files (`STATUS.md`, `01-idea.md`, `memory/` files) at creation time.
+
+### When to Use It
+
+- Local tools that need deterministic scaffolding from a canonical source repo
+- Starter templates where some files should be copied verbatim and others should be stamped with project-specific values
+
+### When NOT to Use It
+
+- Cases where the starter must always be fetched from a remote registry or versioned release artifact
+
+### Example
+
+```javascript
+copyRequiredEntries(sourceRoot, projectPath);
+fs.writeFileSync(path.join(projectPath, "STATUS.md"), renderStatusTemplate(...));
+fs.writeFileSync(path.join(projectPath, "01-idea.md"), renderIdeaTemplate(...));
+```
+
+### Anti-Pattern to Avoid
+
+Copying the entire source repo wholesale into every new project - it drags along irrelevant files and makes the scaffold harder to reason about.
+
+---

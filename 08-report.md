@@ -1,4 +1,4 @@
-# Post-Task Report — DevDashboard
+# Post-Task Report - DevDashboard
 
 ## Metadata
 
@@ -7,67 +7,59 @@
 | **Project** | DevDashboard |
 | **Date** | 2026-03-29 |
 | **Author** | Agent |
-| **Stage** | 8 — Documentation |
-| **Duration** | 1 day (3 sessions on 2026-03-29) |
+| **Stage** | 8 - Documentation |
+| **Duration** | 1 day (follow-up enhancement completed on 2026-03-29) |
 
 ---
 
 ## Summary
 
-DevDashboard is a local, read-only web application that provides a visual dashboard for projects built using the AI Build Operating System. It scans configured directories on disk, parses each project's `STATUS.md` and standard artifacts, and presents the information through a clean React-based interface with light and dark themes. Users can see all projects at a glance, drill into any project's full state, view artifact files rendered as markdown, and manage scan directories through an in-app settings panel.
+DevDashboard is a local web application for monitoring and bootstrapping projects built with the AI Build Operating System. It scans configured directories on disk, parses each project's `STATUS.md` and standard artifacts, presents the information through a React-based UI, and now supports creating a brand-new AI Build OS project scaffold directly from the dashboard.
 
 ---
 
 ## What Was Delivered
 
-- **Node.js + Express backend** with REST API for project discovery, STATUS.md parsing, artifact detection, and secure file reading
-- **React (Vite) frontend** with light/dark theme toggle, project list view, project detail view, file viewer overlay, and settings modal
-- **Smart scanner** that detects projects whether a parent folder or project folder is configured as a scan directory
-- **STATUS.md parser** that extracts all 14 control panel fields, completed artifacts checklist, and stage history table
-- **Path security** preventing directory traversal attacks on the file-reading endpoint
-- **Settings UI** for adding/removing scan directories without editing `config.json` manually
-- **Two-row project layout** separating tracked projects (with STATUS.md) from uninitialized projects
-- **Production build pipeline** — `npm run build` + `npm start` serves everything from a single port
+- Express backend for project discovery, STATUS parsing, artifact detection, secure file reading, and project bootstrap
+- React frontend with project list, project detail, markdown file viewer, theme toggle, settings modal, and create-project modal
+- Smart scanner for parent-folder or project-folder scan locations
+- STATUS parser that extracts control-panel fields, artifact checklist state, and stage history
+- Create-project flow that:
+  - reads `bootstrapSourcePath` from `config.json`
+  - creates a new folder in the chosen parent location
+  - copies curated AI Build OS starter files
+  - generates `STATUS.md`, `01-idea.md`, and starter `memory/` files
+  - auto-adds the parent location to `scanDirectories` when needed
+- Production build pipeline with `npm run build` and `npm start`
 
 ---
 
-## Requirements Met
+## Session Addendum
 
-| # | Requirement | Met? |
-|---|---|---|
-| 1 | Scan configured directories and discover projects with STATUS.md | ✅ |
-| 2 | Parse STATUS.md control panel (all 14 fields) | ✅ |
-| 3 | Parse completed artifacts checklist | ✅ |
-| 4 | Parse stage history table | ✅ |
-| 5 | Detect existence of 10 standard artifact files | ✅ |
-| 6 | Project list view with summary cards | ✅ |
-| 7 | Sort by name, last updated, stage number | ✅ |
-| 8 | Status badges (not-started, in-progress, blocked, complete) | ✅ |
-| 9 | Who-acts-next badge (human, agent) | ✅ |
-| 10 | Blocker alert on project cards | ✅ |
-| 11 | Project detail view with all STATUS.md fields | ✅ |
-| 12 | Visual workflow map (9 stages, completed/active/blocked/upcoming) | ✅ |
-| 13 | Artifact checklist with completion + file existence | ✅ |
-| 14 | Stage history table | ✅ |
-| 15 | File viewer rendering markdown (react-markdown + remark-gfm) | ✅ |
-| 16 | Path security — no directory traversal | ✅ |
-| 17 | Graceful handling of missing/malformed STATUS.md | ✅ |
-| 18 | Configuration via config.json | ✅ |
-| 19 | GET /api/projects, /api/projects/:id, /api/projects/:id/files, /api/projects/:id/files/:filename, /api/config | ✅ |
-| 20 | Dark theme (with light/dark toggle) | ✅ |
-| 21 | Performance — loads within 2 seconds for up to 50 projects | ✅ |
-| 22 | Local-only, no database, no authentication | ✅ |
+This session extended the completed project with the bootstrap feature and updated the documentation chain to reflect it.
 
-### Post-MVP additions (beyond original spec)
+### Enhancement shipped this session
 
-| # | Enhancement | Met? |
-|---|---|---|
-| 23 | Settings UI for scan directory management | ✅ |
-| 24 | Smart scanner (parent folder or project folder) | ✅ |
-| 25 | Uninitialized project tiles (no STATUS.md) | ✅ |
-| 26 | Two-row layout (tracked / uninitialized) | ✅ |
-| 27 | Alternate file paths (memory/decisions.md fallback) | ✅ |
-| 28 | Light/dark theme toggle with localStorage persistence | ✅ |
+- Added `bootstrapSourcePath` configuration support
+- Added `POST /api/projects/bootstrap`
+- Added backend scaffold generation in `server/services/projectBootstrap.js`
+- Added header-level `New Project` modal in the UI
+- Added validation and cleanup for partial scaffold failures
+- Updated README, review, report, handoff, decisions, patterns, plan, spec, tasks, and implementation log
+
+### Validation completed this session
+
+- `npm run build`
+- Bootstrap smoke test on a dedicated throwaway server instance on port `3101`
+- Scaffold verification for:
+  - `STATUS.md`
+  - `01-idea.md`
+  - `templates/`
+  - `workflow/`
+  - `.agents/`
+  - `memory/decisions.md`
+  - `memory/patterns.md`
+  - `memory/project-index.md`
 
 ---
 
@@ -75,33 +67,15 @@ DevDashboard is a local, read-only web application that provides a visual dashbo
 
 | Decision | Rationale |
 |---|---|
-| Express over Next.js | No SSR needs; cleaner API/SPA separation for a local tool |
-| Vite over Create React App | Faster dev server, smaller builds, CRA effectively deprecated |
-| Plain CSS over Tailwind/CSS-in-JS | Fewer dependencies, simpler build, CSS variables suffice for theming |
-| react-markdown with remark-gfm | Battle-tested, GFM support out of the box, React-native integration |
-| File-based config (config.json) | Keeps MVP simple; settings UI added post-MVP |
-| Stable project IDs from path | Deterministic `{scanDirIndex}-{folderName}` — no persistence needed |
+| Express over Next.js | No SSR needs; clearer local API and SPA separation |
+| Vite over CRA | Faster dev server and modern tooling |
+| Plain CSS with custom properties | Fewer dependencies and enough flexibility for this app |
+| `react-markdown` with `remark-gfm` | Reliable markdown rendering with GitHub-flavored markdown support |
+| Config-driven local starter source | Keeps scaffold creation fast, deterministic, and offline-friendly |
+| Auto-add bootstrap parent locations | Ensures a newly created project appears in the dashboard immediately |
+| Stable project IDs from path | Deterministic IDs without extra persistence |
 
-Full details in `memory/decisions.md`.
-
----
-
-## What Worked Well
-
-- **Artifact-first workflow**: Having the spec, plan, and task breakdown complete before coding meant zero ambiguity during implementation — every task had clear acceptance criteria
-- **Incremental task execution**: Building backend services first (scanner, parser, detector, security) then wiring API routes, then building frontend — each layer was testable in isolation before the next layer depended on it
-- **Single-file-per-concern architecture**: Each backend service (`scanner.js`, `statusParser.js`, `artifactDetector.js`, `pathSecurity.js`) has one job, making them easy to test and debug
-- **Vite dev experience**: Hot module replacement and the API proxy made frontend iteration fast
-- **CSS custom properties for theming**: Simple to implement, no runtime cost, and cleanly extended to support both light and dark themes with a toggle persisted via localStorage
-- **Post-MVP enhancements during review**: The settings UI and smart scanner were identified during review and shipped without disrupting the core architecture
-
----
-
-## What Didn't Work Well
-
-- **decisions.md alternate path not anticipated**: The artifact detector knew about `memory/decisions.md` as an alternate path, but the file route didn't initially check it — caught during session 3 review. This suggests that alternate file paths should be handled as a cross-cutting concern rather than per-module
-- **No automated tests**: All validation was manual (API calls via PowerShell, browser inspection). For a tool that parses structured files, unit tests for the parser and scanner would catch regressions faster
-- **07-review.md artifact not initially persisted to disk**: The review was conducted in-session but the `07-review.md` file wasn't written to the project folder until session 4, when this gap was identified during a follow-up review
+Full details live in [memory/decisions.md](C:/Github/DevDashboard/memory/decisions.md).
 
 ---
 
@@ -109,24 +83,54 @@ Full details in `memory/decisions.md`.
 
 | Pattern | Description |
 |---|---|
-| Factory-function routes | Express route modules export a factory function that receives config, keeping routes testable and config-injectable |
-| Alternate path resolution | When artifact files may live at multiple locations (root or `memory/`), maintain a single map and resolve at the file-reading layer |
-| Smart scanner with deduplication | When users may configure overlapping paths, deduplicate projects by resolved absolute path |
-| Parse-error passthrough | Return partial data with a `parseError` field instead of throwing — lets the UI degrade gracefully |
+| Factory-function routes | Route modules receive config/services explicitly, which keeps them testable |
+| Alternate path resolution | Shared alternate paths prevent file-view bugs for `memory/` artifacts |
+| Smart scanner with deduplication | Overlapping scan directories are handled without duplicate projects |
+| Parse-error passthrough | Broken STATUS files degrade gracefully instead of crashing the dashboard |
+| Curated local starter scaffold | Copy only required starter assets and generate project-specific files at creation time |
 
-Full details in `patterns.md` (located at `memory/patterns.md`).
+Full details live in [memory/patterns.md](C:/Github/DevDashboard/memory/patterns.md).
+
+---
+
+## What Worked Well
+
+- Artifact-first planning made the bootstrap enhancement straightforward to add without guessing
+- The existing backend/frontend split made it easy to add one write path without disturbing the read-only flows
+- Reusing the settings/file-viewer modal language kept the new UI consistent
+- The dedicated smoke test on port `3101` let the bootstrap route be verified safely against the updated code
+
+---
+
+## What Did Not Work Well
+
+- No automated tests still means verification is manual
+- An older DevDashboard server process on `localhost:3000` can mask new backend changes after code updates
+- Some documentation files had legacy encoding inconsistencies, which made exact text patching more brittle than expected
+
+---
+
+## Operational Note
+
+If the UI shows `bootstrapSourcePath is not configured in config.json` even though the file has already been updated, the most likely cause is that `localhost:3000` is still serving an older backend process. Restart the server and verify:
+
+```powershell
+Invoke-RestMethod http://localhost:3000/api/config | ConvertTo-Json
+```
+
+The JSON should include `bootstrapSourcePath`.
 
 ---
 
 ## Known Limitations
 
-- **Read-only**: No editing of project files from the UI
-- **No automated tests**: All validation was manual
-- **No auto-refresh**: Project list requires manual page reload to pick up changes
-- **Single-level scan**: Only scans immediate children of configured directories
-- **No file browser for nested directories**: Only root-level project files are listed
-- **No search/filter**: Projects can only be sorted, not filtered by name
-- **Windows-primary**: Tested on Windows 10; should work on macOS/Linux but not verified
+- Mostly read-only: project creation is supported, but editing existing project files from the UI is not
+- No automated tests
+- No auto-refresh
+- Single-level directory scan only
+- No nested directory browser
+- No search/filter yet
+- Windows-primary validation only
 
 ---
 
@@ -134,12 +138,13 @@ Full details in `patterns.md` (located at `memory/patterns.md`).
 
 | # | Follow-Up Item | Priority | Notes |
 |---|---|---|---|
-| 1 | Auto-refresh project list on timer or file watcher | Medium | Eliminates manual reload after external changes |
-| 2 | Unit tests for parser, scanner, and path security | Medium | Prevents regressions, enables CI |
-| 3 | Search/filter projects by name | Low | Useful once project count grows |
-| 4 | File browser for nested directories | Low | Currently only shows root-level files |
-| 5 | Bulk-initialize projects (create STATUS.md from template) | Low | Would move the app from read-only toward workflow management |
-| 6 | Cross-platform verification (macOS/Linux) | Low | Path handling uses `path.resolve` but not explicitly tested |
+| 1 | Add unit tests for parser, scanner, path security, and bootstrap service | Medium | Reduces regression risk |
+| 2 | Implement auto-refresh | Medium | Improves dashboard freshness |
+| 3 | Add UI support for editing `bootstrapSourcePath` | Low | Currently config-file only |
+| 4 | Add search/filter | Low | Helps once project count grows |
+| 5 | Add nested file browsing | Low | Current viewer is artifact-focused |
+| 6 | Consider optional GitHub fallback for starter source | Low | Useful if the local starter repo is unavailable |
+| 7 | Verify macOS/Linux behavior | Low | Path handling is designed cross-platform but not fully verified |
 
 ---
 
@@ -148,9 +153,9 @@ Full details in `patterns.md` (located at `memory/patterns.md`).
 | Question | Answer |
 |---|---|
 | **Where is the code?** | `C:/Github/DevDashboard` |
-| **How to run it?** | `npm install && npm run build && npm start` — then open `http://localhost:3000` |
-| **How to develop?** | `npm run dev` — starts Express on :3000 and Vite on :5173 with hot reload |
-| **Is it deployed?** | No — local only |
-| **Where is it deployed?** | N/A |
+| **How to run it?** | `npm install && npm run build && npm start` |
+| **How to develop?** | `npm run dev` |
+| **How to confirm the bootstrap backend is live?** | `Invoke-RestMethod http://localhost:3000/api/config \| ConvertTo-Json` should include `bootstrapSourcePath` |
+| **Is it deployed?** | No - local only |
 
 ---

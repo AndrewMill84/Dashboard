@@ -14,9 +14,9 @@
 
 ## 1. Product Summary
 
-DevDashboard is a local, read-only web application that provides a visual dashboard for projects built using the AI Build Operating System. It scans configured directories, reads each project's `STATUS.md` and standard artifacts, and presents the information in a clean, browsable interface.
+DevDashboard is a local web application that provides a visual dashboard for projects built using the AI Build Operating System. It scans configured directories, reads each project's `STATUS.md` and standard artifacts, and presents the information in a clean, browsable interface.
 
-The user can see all discovered projects at a glance, drill into any single project to understand its full state, view project files directly in the app, and quickly determine what needs to happen next.
+The user can see all discovered projects at a glance, drill into any single project to understand its full state, view project files directly in the app, and quickly determine what needs to happen next. The app also provides a lightweight bootstrap flow for creating a new AI Build OS project scaffold from a configured local starter repository.
 
 ---
 
@@ -39,6 +39,7 @@ The application must make it easy to:
 4. View project artifacts (markdown files) directly in the dashboard
 5. Identify blocked projects or projects needing human input
 6. Resume work on any project with minimal re-orientation
+7. Create a new AI Build OS project scaffold from the dashboard without manual file copying
 
 ---
 
@@ -103,6 +104,7 @@ The app reads a `config.json` file from the application root directory.
     "C:/Github",
     "D:/Projects"
   ],
+  "bootstrapSourcePath": "C:/Users/andre/AI Build Process/ai-build-os",
   "port": 3000
 }
 ```
@@ -110,6 +112,7 @@ The app reads a `config.json` file from the application root directory.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `scanDirectories` | `string[]` | Yes | List of absolute paths to parent directories containing project folders |
+| `bootstrapSourcePath` | `string` | No | Absolute path to the local AI Build OS starter repository used to scaffold new projects |
 | `port` | `number` | No | Port for the local server (default: `3000`) |
 
 ---
@@ -124,7 +127,7 @@ A folder inside a scan directory is treated as a valid project if and only if it
 
 - The app scans each configured directory one level deep (not recursive)
 - Each immediate child folder is checked for the presence of `STATUS.md`
-- Folders without `STATUS.md` are ignored
+- Folders without `STATUS.md` are shown as uninitialized locations
 - If `STATUS.md` exists but cannot be parsed, the project is shown with a warning state
 
 ---
@@ -267,6 +270,29 @@ Opened when the user clicks on an artifact file from the project detail view.
 - Standard markdown elements supported: headings, paragraphs, lists, tables, code blocks, inline formatting
 - No support needed for images or embedded media in MVP
 
+### 10.4 Create Project Flow
+
+The dashboard includes a modal flow for creating a new AI Build OS project scaffold.
+
+**Inputs:**
+- Parent location on disk (absolute path)
+- New project folder name
+
+**Behaviour:**
+- The backend creates a new folder inside the selected location
+- The folder is populated from the configured local AI Build OS starter repository
+- The starter includes agent rules, workflow definitions, templates, and a fresh `STATUS.md`
+- `01-idea.md` is created from the idea template so the human can begin Stage 1 immediately
+- A lightweight `memory/` folder is initialized for decisions, patterns, and project index tracking
+- If the chosen parent location is not already in `scanDirectories`, the app adds it automatically so the new project appears immediately
+- On success, the UI navigates directly to the new project's detail view
+
+**Validation / failure cases:**
+- Reject empty or invalid folder names
+- Reject existing target folders
+- Reject non-existent parent locations
+- Show a clear error if `bootstrapSourcePath` is missing or invalid
+
 ---
 
 ## 11. API Endpoints
@@ -279,6 +305,7 @@ The backend exposes a simple REST API consumed by the frontend.
 | `GET` | `/api/projects/:id` | Returns full detail for a single project (parsed STATUS.md + artifact status) |
 | `GET` | `/api/projects/:id/files` | Returns the list of files in the project folder |
 | `GET` | `/api/projects/:id/files/:filename` | Returns the raw content of a specific file |
+| `POST` | `/api/projects/bootstrap` | Creates a new AI Build OS project scaffold in a chosen location |
 | `GET` | `/api/config` | Returns the current app configuration |
 
 ### Project identifier
@@ -294,6 +321,7 @@ Each project is identified by a combination of its scan directory index and fold
 | **Performance** | Should load the project list within 2 seconds for up to 50 projects |
 | **Reliability** | Gracefully handles missing, malformed, or empty STATUS.md files |
 | **Security** | File access is restricted to configured scan directories only (no path traversal) |
+| **Scaffold safety** | Project creation must only write inside the chosen parent directory and must fail clearly if the target folder already exists |
 | **Portability** | Runs on Windows (primary), should also work on macOS/Linux |
 | **Simplicity** | No database, no authentication, no external services |
 
@@ -304,7 +332,6 @@ Each project is identified by a combination of its scan directory index and fold
 The following are explicitly excluded from the first version:
 
 - Editing project files from the UI
-- Creating new projects from the dashboard
 - Updating STATUS.md from the dashboard
 - Cloud hosting or remote access
 - Multi-user or team features
@@ -312,7 +339,8 @@ The following are explicitly excluded from the first version:
 - Advanced analytics or reporting
 - Automatic AI execution or prompt generation
 - Image or media rendering in the file viewer
-- Settings UI (configuration is via `config.json` only)
+- Downloading starter files directly from GitHub
+- Editing the bootstrap source path from the UI
 
 ---
 
@@ -346,6 +374,7 @@ The MVP is successful if:
 6. Clicking an artifact opens the file content rendered as formatted markdown
 7. Projects with broken `STATUS.md` appear with a clear warning rather than crashing
 8. The dashboard makes it faster to understand project state than manually opening files
+9. A new project can be scaffolded from the dashboard and is ready for Stage 1 immediately after creation
 
 ---
 

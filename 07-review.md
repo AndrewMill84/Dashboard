@@ -11,6 +11,28 @@
 
 ---
 
+## Bootstrap Enhancement Addendum
+
+### Validation Summary
+
+| Check | Status | Notes |
+|---|---|---|
+| `GET /api/config` returns `bootstrapSourcePath` | PASS | Verified on a dedicated throwaway server instance on port `3101` |
+| `POST /api/projects/bootstrap` creates a scaffold | PASS | Returned `201` and a new project ID |
+| Starter scaffold contains required files | PASS | Verified `STATUS.md`, `01-idea.md`, `templates/`, `workflow/`, `.agents/`, `QUICKREF.md`, checklist, and `memory/` files |
+| New parent location is added automatically when needed | PASS | Smoke test returned `locationAdded: true` and the location was removed again during cleanup |
+| Frontend build still succeeds | PASS | `npm run build` completed successfully after the UI changes |
+
+### Issues Found
+
+None.
+
+### Addendum Result: PASS
+
+The bootstrap enhancement meets the reopened specification and integrates cleanly with the existing dashboard. Validation covered both the new backend create route and the generated scaffold contents.
+
+---
+
 ## Requirements Verification
 
 | # | Requirement | Status | Evidence / Notes |

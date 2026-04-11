@@ -835,6 +835,99 @@
   cursor: not-allowed;
 }
 
+.create-project-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  box-shadow: var(--shadow-elevated);
+}
+
+.create-project-content {
+  padding: 24px;
+}
+
+.create-project-description {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.create-project-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+.create-project-source {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.create-project-source-label,
+.create-project-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.create-project-source code {
+  display: block;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.create-project-form {
+  display: grid;
+  gap: 14px;
+}
+
+.create-project-field {
+  display: grid;
+  gap: 6px;
+}
+
+.create-project-input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.create-project-input::placeholder {
+  color: var(--text-muted);
+}
+
+.create-project-input:focus {
+  border-color: var(--accent);
+}
+
+.create-project-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.create-project-cancel,
+.create-project-submit,
+.header-primary-btn,
 .header-theme-btn,
 .header-settings-btn {
   background: var(--bg-tertiary);
@@ -844,6 +937,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.create-project-cancel,
+.create-project-submit {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.create-project-submit,
+.header-primary-btn {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.header-primary-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .header-theme-btn {
@@ -859,9 +974,26 @@
   font-size: 1.1rem;
 }
 
+.create-project-cancel:hover:not(:disabled),
 .header-theme-btn:hover,
 .header-settings-btn:hover {
   background: var(--accent-subtle);
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.create-project-submit:hover:not(:disabled),
+.header-primary-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.create-project-cancel:disabled,
+.create-project-submit:disabled,
+.header-theme-btn:disabled,
+.header-settings-btn:disabled,
+.header-primary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

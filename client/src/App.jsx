@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import ProjectList from "./components/ProjectList";
 import ProjectDetail from "./components/ProjectDetail";
 import SettingsModal from "./components/SettingsModal";
+import CreateProjectModal from "./components/CreateProjectModal";
 
 const THEME_STORAGE_KEY = "devdashboard-theme";
 
@@ -23,10 +24,11 @@ function getInitialTheme() {
 
 export default function App() {
   const [showSettings, setShowSettings] = useState(false);
+  const [showCreateProject, setShowCreateProject] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [theme, setTheme] = useState(getInitialTheme);
 
-  const handleDirectoriesChanged = useCallback(() => {
+  const handleProjectsChanged = useCallback(() => {
     setRefreshKey((k) => k + 1);
   }, []);
 
@@ -52,6 +54,14 @@ export default function App() {
             </Link>
           </h1>
           <div className="header-actions">
+            <button
+              className="header-primary-btn"
+              onClick={() => setShowCreateProject(true)}
+              title="Create a new project scaffold"
+              aria-label="Create a new project scaffold"
+            >
+              New Project
+            </button>
             <button
               className="header-theme-btn"
               onClick={toggleTheme}
@@ -81,7 +91,14 @@ export default function App() {
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          onDirectoriesChanged={handleDirectoriesChanged}
+          onDirectoriesChanged={handleProjectsChanged}
+        />
+      )}
+
+      {showCreateProject && (
+        <CreateProjectModal
+          onClose={() => setShowCreateProject(false)}
+          onProjectCreated={handleProjectsChanged}
         />
       )}
     </BrowserRouter>

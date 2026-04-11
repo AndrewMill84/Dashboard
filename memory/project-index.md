@@ -6,17 +6,17 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Complete (MVP + post-MVP enhancements) |
+| **Status** | Complete (MVP + bootstrap enhancement) |
 | **Location** | `C:/Github/DevDashboard` |
 | **Started** | 2026-03-29 |
 | **Completed** | 2026-03-29 |
-| **Sessions** | 4 (idea → clarification → spec/plan/tasks → implementation → review → documentation → handoff) |
+| **Sessions** | 4 same-day sessions including the bootstrap enhancement pass |
 | **Tech Stack** | Node.js, Express, React, Vite, CSS custom properties |
 | **Report** | `08-report.md` |
 
 ### Description
 
-Local read-only web dashboard for projects using the AI Build Operating System. Scans directories, parses STATUS.md files, and presents project state through a dark-themed React UI with project list, detail view, file viewer, and settings panel.
+Local web dashboard for projects using the AI Build Operating System. Scans directories, parses `STATUS.md` files, presents project state through a React UI, and can bootstrap a brand-new AI Build OS project from a configured local starter repository.
 
 ### Key Artifacts
 

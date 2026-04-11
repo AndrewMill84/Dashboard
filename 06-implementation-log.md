@@ -2,6 +2,103 @@
 
 ---
 
+## Task 13: Bootstrap config and scaffold service
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-03-29 |
+| **Task** | Task 13 - Bootstrap config and scaffold service |
+| **Status** | Done |
+
+### What was done
+
+- Added `bootstrapSourcePath` to `config.json` and `server/config.js`
+- Created `server/services/projectBootstrap.js` to validate starter inputs, create the target folder, copy the curated starter set, and generate fresh project-specific files
+- Generated `STATUS.md`, `01-idea.md`, `memory/decisions.md`, `memory/patterns.md`, and `memory/project-index.md` for each new project
+- Added rollback cleanup so partial scaffolds are removed if any write fails
+
+### Acceptance criteria verification
+
+- [x] `bootstrapSourcePath` is loaded and exposed to the app
+- [x] Parent directory, starter source, and folder name are validated
+- [x] The created scaffold includes starter agent files, `workflow/`, `templates/`, `STATUS.md`, `01-idea.md`, and `memory/` starter files
+- [x] Partial scaffolds are rolled back on failure
+
+---
+
+## Task 14: Bootstrap API route
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-03-29 |
+| **Task** | Task 14 - Bootstrap API route |
+| **Status** | Done |
+
+### What was done
+
+- Added `POST /api/projects/bootstrap` to `server/routes/projects.js`
+- Extended `GET /api/config` to return `bootstrapSourcePath`
+- Implemented auto-add of a new parent location to `scanDirectories` when needed
+- Added config rollback if bootstrap fails after the location was added
+
+### Acceptance criteria verification
+
+- [x] `POST /api/projects/bootstrap` validates input and returns `201` on success
+- [x] The endpoint adds the parent directory to `scanDirectories` when needed
+- [x] Config rollback happens if the bootstrap service fails after a location was added
+- [x] The response includes the new project ID and path
+
+---
+
+## Task 15: Create-project modal and header wiring
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-03-29 |
+| **Task** | Task 15 - Create-project modal and header wiring |
+| **Status** | Done |
+
+### What was done
+
+- Added a `New Project` button in the app header
+- Added `CreateProjectModal.jsx` to collect location and folder name, suggest current scan directories, and call the bootstrap API
+- Updated the app refresh flow so successful creation refreshes the dashboard and navigates to the new project detail page
+- Added modal and button styling to match the existing settings / file viewer language
+
+### Acceptance criteria verification
+
+- [x] A `New Project` button is visible in the header
+- [x] The modal suggests configured scan directories and accepts custom absolute paths
+- [x] Success refreshes the dashboard and navigates to the created project
+- [x] Inline error states are shown for validation or API failures
+
+---
+
+## Task 16: Bootstrap validation and documentation updates
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-03-29 |
+| **Task** | Task 16 - Bootstrap validation and documentation updates |
+| **Status** | Done |
+
+### What was done
+
+- Updated `README.md` with the bootstrap config field, API endpoint, and create-project flow
+- Updated spec, plan, task breakdown, decision log, and status tracker for the reopened feature scope
+- Rebuilt the production frontend bundle successfully
+- Ran a dedicated bootstrap smoke test on a throwaway server instance bound to port `3101` and verified the scaffolded files before cleaning up the temp project
+- Documented the operational gotcha that an already-running server on `localhost:3000` must be restarted before the new bootstrap route and config field are visible
+
+### Acceptance criteria verification
+
+- [x] Production build still succeeds
+- [x] A real scaffold creation is verified
+- [x] README documents `bootstrapSourcePath` and the create-project flow
+- [x] Review / report / handoff are updated to reflect the new capability
+
+---
+
 ## Task 1: Project scaffolding
 
 | Field | Value |
