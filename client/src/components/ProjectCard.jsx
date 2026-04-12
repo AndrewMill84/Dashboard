@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "./StatusBadge";
+import RunProjectModal from "./RunProjectModal";
 import { STAGES } from "../utils/stages";
 
 function ProgressBar({ stageNumber }) {
@@ -26,6 +28,7 @@ function ProgressBar({ stageNumber }) {
 
 export default function ProjectCard({ project }) {
   const navigate = useNavigate();
+  const [runOpen, setRunOpen] = useState(false);
   const missing = project.hasStatus === false;
 
   const action = project.currentActionRequired || "";
@@ -44,11 +47,24 @@ export default function ProjectCard({ project }) {
     >
       <div className="card-header">
         <h3 className="card-title">{project.name}</h3>
-        {missing ? (
-          <span className="card-missing-badge">No STATUS.md</span>
-        ) : (
-          <StatusBadge status={project.stageStatus} />
-        )}
+        <div className="card-header-badges">
+          {missing ? (
+            <span className="card-missing-badge">No STATUS.md</span>
+          ) : (
+            <StatusBadge status={project.stageStatus} />
+          )}
+          <button
+            type="button"
+            className="card-run-pill"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRunOpen(true);
+            }}
+            title="How to run and project location"
+          >
+            Run
+          </button>
+        </div>
       </div>
 
       {missing ? (
@@ -88,6 +104,15 @@ export default function ProjectCard({ project }) {
             )}
           </div>
         </>
+      )}
+
+      {runOpen && (
+        <RunProjectModal
+          projectName={project.name}
+          projectPath={project.path ?? ""}
+          howToRunMarkdown={project.howToRunMarkdown}
+          onClose={() => setRunOpen(false)}
+        />
       )}
     </article>
   );

@@ -1,4 +1,5 @@
 const SORT_OPTIONS = [
+  { value: "workflow", label: "Workflow" },
   { value: "name", label: "Name (A\u2013Z)" },
   { value: "updated", label: "Last Updated" },
   { value: "stage", label: "Stage" },

@@ -6,7 +6,10 @@ const {
   findProjectById,
   projectIdFromPath,
 } = require("../services/scanner");
-const { parseStatusFile } = require("../services/statusParser");
+const {
+  parseStatusFile,
+  computeStatusEngaged,
+} = require("../services/statusParser");
 const { detectArtifacts } = require("../services/artifactDetector");
 const { bootstrapProject } = require("../services/projectBootstrap");
 
@@ -87,7 +90,11 @@ function createProjectRoutes(config) {
           return {
             id: project.id,
             name: project.name,
+            path: project.path,
             hasStatus: false,
+            statusEngaged: false,
+            hasHowToRun: false,
+            howToRunMarkdown: null,
             currentStage: null,
             stageStatus: "not-started",
             currentActionRequired: null,
@@ -104,15 +111,22 @@ function createProjectRoutes(config) {
         const statusPath = path.join(project.path, "STATUS.md");
         const status = parseStatusFile(statusPath);
 
-        const completedCount = status.completedArtifacts.filter(
+        const completedCount = (status.completedArtifacts || []).filter(
           (a) => a.completed
         ).length;
-        const totalArtifacts = status.completedArtifacts.length || 10;
+        const totalArtifacts = (status.completedArtifacts || []).length || 10;
+        const statusEngaged = computeStatusEngaged(status);
+        const howToRunMarkdown = status.howToRunMarkdown || null;
+        const hasHowToRun = Boolean(howToRunMarkdown);
 
         return {
           id: project.id,
           name: project.name,
+          path: project.path,
           hasStatus: true,
+          statusEngaged,
+          hasHowToRun,
+          howToRunMarkdown,
           currentStage: status.currentStage,
           stageStatus: status.stageStatus,
           currentActionRequired: status.currentActionRequired,
@@ -149,6 +163,9 @@ function createProjectRoutes(config) {
           name: project.name,
           path: project.path,
           hasStatus: false,
+          statusEngaged: false,
+          hasHowToRun: false,
+          howToRunMarkdown: null,
           project: project.name,
           currentStage: null,
           stageNumber: null,
@@ -174,12 +191,16 @@ function createProjectRoutes(config) {
 
       const statusPath = path.join(project.path, "STATUS.md");
       const status = parseStatusFile(statusPath);
+      const statusEngaged = computeStatusEngaged(status);
+      const hasHowToRun = Boolean(status.howToRunMarkdown);
 
       res.json({
         id: project.id,
         name: project.name,
         path: project.path,
         hasStatus: true,
+        statusEngaged,
+        hasHowToRun,
         ...status,
         artifactFiles: artifacts,
       });

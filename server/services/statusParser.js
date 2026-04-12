@@ -1,5 +1,21 @@
 const fs = require("fs");
 
+/**
+ * Optional "## How to run" section in STATUS.md (AI Build OS / DevDashboard).
+ *
+ * Contract:
+ * - Heading: `## How to run` (case-insensitive for the parser).
+ * - Body: Markdown until the next `## ` section (e.g. Completed Artifacts).
+ * - Use fenced code blocks for shell commands, bullets for notes.
+ *
+ * Example:
+ *   ## How to run
+ *   From the repo root:
+ *   ```bash
+ *   npm install && npm run dev
+ *   ```
+ */
+
 const FIELD_MAP = {
   project: "project",
   "current stage": "currentStage",
@@ -157,6 +173,51 @@ function parseStageHistory(lines) {
   return history;
 }
 
+function parseHowToRunSection(lines) {
+  let inSection = false;
+  const body = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (/^##\s+how\s+to\s+run\b/i.test(trimmed)) {
+      inSection = true;
+      continue;
+    }
+
+    if (inSection && /^##\s/.test(trimmed)) {
+      break;
+    }
+
+    if (inSection) {
+      body.push(line);
+    }
+  }
+
+  return body.join("\n").trim();
+}
+
+/**
+ * True when STATUS reflects real workflow progress (vs template / empty control panel).
+ * Used for dashboard ordering; keep in sync with client expectations.
+ */
+function computeStatusEngaged(parsed) {
+  if (!parsed || parsed.parseError) return false;
+
+  const completed = (parsed.completedArtifacts || []).filter((a) => a.completed)
+    .length;
+  const stageNum = parsed.stageNumber;
+  const st = (parsed.stageStatus || "").toLowerCase().replace(/\s+/g, "-");
+  const action = (parsed.currentActionRequired || "").trim();
+  const noneAction = !action || action.toLowerCase() === "none";
+
+  if (completed > 0) return true;
+  if (stageNum != null && stageNum >= 2) return true;
+  if (st === "in-progress" || st === "blocked" || st === "complete") return true;
+  if (!noneAction) return true;
+  return false;
+}
+
 function parseStatusFile(filePath) {
   let content;
   try {
@@ -164,6 +225,7 @@ function parseStatusFile(filePath) {
   } catch (err) {
     return {
       parseError: `Failed to read STATUS.md: ${err.message}`,
+      howToRunMarkdown: null,
     };
   }
 
@@ -188,6 +250,7 @@ function parseStatusFile(filePath) {
     lastUpdated: null,
     completedArtifacts: [],
     stageHistory: [],
+    howToRunMarkdown: null,
     parseError: null,
   };
 
@@ -218,7 +281,16 @@ function parseStatusFile(filePath) {
     }
   }
 
+  try {
+    const howToRun = parseHowToRunSection(lines);
+    result.howToRunMarkdown = howToRun.length > 0 ? howToRun : null;
+  } catch (err) {
+    if (!result.parseError) {
+      result.parseError = `Error parsing How to run section: ${err.message}`;
+    }
+  }
+
   return result;
 }
 
-module.exports = { parseStatusFile };
+module.exports = { parseStatusFile, computeStatusEngaged };
